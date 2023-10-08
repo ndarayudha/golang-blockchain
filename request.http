@@ -1,0 +1,10 @@
+### Get blockchains
+GET http://localhost:8080
+
+### Add Block
+POST http://localhost:8080
+Content-Type: application/json
+
+{
+    "BPM": 45
+}
