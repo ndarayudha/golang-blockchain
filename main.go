@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"golang-blockchain/models"
 	"io"
 	"log"
 	"net/http"
@@ -15,20 +16,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Index is the position of the data record in the blockchain
-// Timestamp is automatically determined and is the time the data is written
-// BPM or beats per minute, is your pulse rate
-// Hash is a SHA256 identifier representing this data record
-// PrevHash is the SHA256 identifier of the previous record in the chain
-type Block struct {
-	Index     int
-	Timestamp string
-	BPM       int
-	Hash      string
-	PrevHash  string
-}
-
-var Blockchain []Block
+var Blockchain []models.Block
 
 type Message struct {
 	BPM int
@@ -42,7 +30,7 @@ func main() {
 
 	go func() {
 		t := time.Now()
-		genesisBlock := Block{
+		genesisBlock := models.Block{
 			Index:     0,
 			Timestamp: t.String(),
 			BPM:       0,
@@ -56,7 +44,7 @@ func main() {
 	log.Fatal(run())
 }
 
-func calculateHash(block Block) string {
+func calculateHash(block models.Block) string {
 	record := string(rune(block.Index)) + block.Timestamp + string(rune(block.BPM)) + block.PrevHash
 	h := sha256.New()
 	h.Write([]byte(record))
@@ -64,8 +52,8 @@ func calculateHash(block Block) string {
 	return hex.EncodeToString(hashed)
 }
 
-func generateBlock(oldBlock Block, BPM int) (Block, error) {
-	var newBlock Block
+func generateBlock(oldBlock models.Block, BPM int) (models.Block, error) {
+	var newBlock models.Block
 
 	t := time.Now()
 
@@ -78,7 +66,7 @@ func generateBlock(oldBlock Block, BPM int) (Block, error) {
 	return newBlock, nil
 }
 
-func isBlockValid(newBlock, oldBLock Block) bool {
+func isBlockValid(newBlock, oldBLock models.Block) bool {
 	if oldBLock.Index+1 != newBlock.Index {
 		return false
 	}
@@ -94,7 +82,7 @@ func isBlockValid(newBlock, oldBLock Block) bool {
 	return true
 }
 
-func replaceChain(newBlock []Block) {
+func replaceChain(newBlock []models.Block) {
 	if len(newBlock) > len(Blockchain) {
 		Blockchain = newBlock
 	}
@@ -126,7 +114,7 @@ func makeMuxRouter() http.Handler {
 	return muxRouter
 }
 
-func handleGetBlockchain(w http.ResponseWriter, r *http.Request) {
+func handleGetBlockchain(w http.ResponseWriter, _ *http.Request) {
 	bytes, err := json.MarshalIndent(Blockchain, "", "  ")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -158,7 +146,7 @@ func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, r, http.StatusCreated, newBlock)
 }
 
-func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload interface{}) {
+func respondWithJSON(w http.ResponseWriter, _ *http.Request, code int, payload interface{}) {
 	response, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
